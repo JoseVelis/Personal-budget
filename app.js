@@ -15,7 +15,7 @@ function Movimiento(descripcion, monto, tipo) {
 // Métodos comunes
 Movimiento.prototype.validarGeneral = function () {
   if (this.monto <= 0) {
-    return { ok: false, message: "El monto debe ser mayor a 0" };
+    return { ok: false, message: "El monto debe ser mayor a 0" };        // Valida monto > 0 Valida descripción no vacía
   }
   if (this.descripcion.trim() === "") {
     return { ok: false, message: "Debe completar la descripción" };
@@ -41,6 +41,14 @@ Movimiento.prototype.render = function () {
           ${this.tipo}
         </span>
       </td>
+      <td class="px-4 py-3">
+        <button class="delete-btn text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md text-sm transition-colors duration-200">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          Eliminar
+        </button>
+      </td>
     </tr>
   `;
   transactionList.insertAdjacentHTML("beforeend", newRow);
@@ -50,7 +58,10 @@ Movimiento.prototype.render = function () {
 Movimiento.prototype.recalcularTotales = function () {
   const income = transacciones
     .filter((t) => t.tipo === "income")
-    .reduce((total, t) => total + Number(t.monto), 0);
+    .reduce((total, t) => total + Number(t.monto), 0);              
+   // Calcula ingresos totales
+    // Calcula egresos totales
+    // Actualiza balance general
 
   const expense = transacciones
     .filter((t) => t.tipo === "expense")
@@ -98,6 +109,8 @@ Egreso.prototype.validarEspecifico = function () {
 
 // Función para mostrar notificaciones
 function mostrarNotificacion(mensaje, tipo = "success") {
+  // Muestra mensajes de éxito/error
+  // Se auto-oculta después de 3 segundos
   notification.textContent = mensaje;
   notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg text-white ${
     tipo === "success" ? "bg-green-500" : "bg-red-500"
@@ -136,9 +149,12 @@ function crearMovimiento(tipo, descripcion, monto) {
 }
 
 // Función para manejar el formulario
+// Captura datos del formulario
+  // Crea y valida el movimiento
+  // Actualiza UI y muestra notificaciones
 form.addEventListener("submit", function (event) {
   event.preventDefault();
-
+ 
   const formData = new FormData(form);
   const descripcion = formData.get("description");
   const monto = Number(formData.get("amount"));
@@ -158,18 +174,23 @@ form.addEventListener("submit", function (event) {
 });
 
 // Eliminar transacción
-transactionList.addEventListener("click", function (event) {
-  if (event.target.tagName === "BUTTON") {
+transactionList.addEventListener("click", async function (event) {
+  if (event.target.closest('.delete-btn')) {
     const row = event.target.closest("tr");
     const descripcion = row.querySelector("td").textContent;
 
-    const index = transacciones.findIndex((t) => t.descripcion === descripcion);
-    if (index !== -1) {
-      transacciones.splice(index, 1);
-    }
+    // Mostrar confirmación usando SweetAlert2 (más elegante) o confirm (nativo)
+    const confirmDelete = confirm("¿Estás seguro de eliminar esta transacción?");
 
-    row.remove();
-    const movimiento = new Movimiento();
-    movimiento.recalcularTotales(); // Actualizar totales
+    if (confirmDelete) {
+      const index = transacciones.findIndex((t) => t.descripcion === descripcion);
+      if (index !== -1) {
+        transacciones.splice(index, 1);
+        row.remove();
+        const movimiento = new Movimiento();
+        movimiento.recalcularTotales();
+        mostrarNotificacion("Transacción eliminada exitosamente", "success");
+      }
+    }
   }
 });
