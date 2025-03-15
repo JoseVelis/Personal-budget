@@ -70,3 +70,58 @@ El uso de estructuras de control de flujo simplificó significativamente el desa
    - Controlan el flujo del programa según las elecciones del usuario
 
 Estas estructuras hicieron que el código fuera más robusto y fácil de usar, manteniendo su capacidad de mantenimiento y expansión.
+
+1. Exportar Datos a CSV
+Descripción: Como usuario, quiero poder exportar todas las transacciones a un archivo CSV para poder analizarlas en herramientas externas como Excel o Google Sheets.
+
+Criterios de Aceptación:
+
+Agregar un botón "Exportar a CSV".
+
+Generar un archivo CSV con las columnas: Descripción, Monto, Tipo (Ingreso/Egreso), Fecha.
+
+Descargar automáticamente el archivo CSV al hacer clic en el botón.
+
+2. Filtrar Transacciones por Fecha
+Descripción: Como usuario, quiero poder filtrar las transacciones por un rango de fechas para poder ver los movimientos de un período específico.
+
+Criterios de Aceptación:
+
+Agregar un selector de fechas (desde/hasta) en la interfaz.
+
+Mostrar solo las transacciones que caen dentro del rango seleccionado.
+
+Actualizar automáticamente la lista de transacciones al cambiar el filtro.
+
+3. Categorías de Transacciones
+Descripción: Como usuario, quiero poder asignar categorías a las transacciones (por ejemplo, Comida, Transporte, Entretenimiento) para organizar mejor mis gastos.
+
+Criterios de Aceptación:
+
+Agregar un campo de selección de categoría en el formulario de registro.
+
+Mostrar las categorías en la lista de transacciones.
+
+Permitir filtrar transacciones por categoría.
+
+4. Gráficos de Resumen
+Descripción: Como usuario, quiero ver gráficos que resuman mis ingresos y egresos para tener una visión más clara de mi situación financiera.
+
+Criterios de Aceptación:
+
+Integrar una librería de gráficos como Chart.js.
+
+Mostrar un gráfico de barras con los ingresos y egresos por mes.
+
+Mostrar un gráfico circular con la distribución de gastos por categoría.
+
+5. Sincronización con la Nube
+Descripción: Como usuario, quiero poder sincronizar mis transacciones con la nube para acceder a mis datos desde cualquier dispositivo.
+
+Criterios de Aceptación:
+
+Implementar un sistema de autenticación (por ejemplo, con Firebase).
+
+Guardar las transacciones en una base de datos en la nube.
+
+Sincronizar automáticamente los datos al iniciar sesión desde otro dispositivo.

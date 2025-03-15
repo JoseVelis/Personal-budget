@@ -1,168 +1,175 @@
-console.log("<------- Personal Budget -------->");
-
-/**
- * "Como usuario, quiero registrar el nombre, tipo(ingreso ó egreso) y monto 
- * de una compra o ingreso, para llevar un control de mi dinero."
-Criterios de Aceptación:
-El sistema solicita el nombre y duración.
-Si el nombre está vacío o la duración es menor o igual a cero, muestra un mensaje de error.
-Si los datos son válidos, se guarda la actividad.
- */
-
-// variable global que permita registrar las operaciones
+// Obtener elementos del DOM
+const form = document.querySelector("form");
+const transactionList = document.querySelector("#transaction-list");
+const notification = document.getElementById("notification"); // Elemento para mostrar mensajes
 const transacciones = [];
 
-function validarDatos(nombre, tipo, monto) {
-  if (!nombre.trim()) {
-    alert("Error: El nombre no puede estar vacío");
-    return false;
-  }
-  
-  if (tipo !== "1" && tipo !== "2") {
-    alert("Error: Debe seleccionar 1 para Ingreso o 2 para Egreso");
-    return false;
-  }
-  
-  const montoNumerico = parseFloat(monto);
-  if (isNaN(montoNumerico) || montoNumerico <= 0) {
-    alert("Error: El monto debe ser un número mayor a cero");
-    return false;
-  }
-  
-  return true;
+// Clase base Movimiento
+function Movimiento(descripcion, monto, tipo) {
+  this.descripcion = descripcion;
+  this.monto = monto;
+  this.tipo = tipo;
+  this.fecha = new Date().toLocaleDateString();
 }
 
-function mostrarResumenPorTipo() {
-  const totalPorTipo = transacciones.reduce((acumulador, transaccion) => {
-    const tipo = transaccion.tipoDeTransaccion;
-    if (!acumulador[tipo]) {
-      acumulador[tipo] = 0;
+// Métodos comunes
+Movimiento.prototype.validarGeneral = function () {
+  if (this.monto <= 0) {
+    return { ok: false, message: "El monto debe ser mayor a 0" };
+  }
+  if (this.descripcion.trim() === "") {
+    return { ok: false, message: "Debe completar la descripción" };
+  }
+  return { ok: true, message: "Validación general exitosa" };
+};
+
+Movimiento.prototype.render = function () {
+  const esEgreso = this.tipo === "expense";
+  const colorTexto = esEgreso ? "text-red-600" : "text-green-600";
+  const colorFondo = esEgreso ? "bg-red-50" : "bg-green-50";
+  const signo = esEgreso ? "-" : "+";
+
+  const newRow = `
+    <tr class="hover:${colorFondo} ${colorFondo}/30 transition-colors duration-200">
+      <td class="px-4 py-3 font-medium">${this.descripcion}</td>
+      <td class="px-4 py-3 ${colorTexto} font-bold">${signo}$${Math.abs(
+    this.monto
+  ).toFixed(2)}</td>
+      <td class="px-4 py-3 text-gray-500">${this.fecha}</td>
+      <td class="px-4 py-3">
+        <span class="inline-block rounded-full px-3 py-1 text-xs ${colorFondo} ${colorTexto}">
+          ${this.tipo}
+        </span>
+      </td>
+    </tr>
+  `;
+  transactionList.insertAdjacentHTML("beforeend", newRow);
+};
+
+// Método para recalcular totales
+Movimiento.prototype.recalcularTotales = function () {
+  const income = transacciones
+    .filter((t) => t.tipo === "income")
+    .reduce((total, t) => total + Number(t.monto), 0);
+
+  const expense = transacciones
+    .filter((t) => t.tipo === "expense")
+    .reduce((total, t) => total + Number(t.monto), 0);
+
+  const balance = income - expense;
+
+  // Actualizar el DOM
+  document.getElementById("balance").textContent = `$${balance.toFixed(2)}`;
+  document.getElementById("income").textContent = `$${income.toFixed(2)}`;
+  document.getElementById("expense").textContent = `$${expense.toFixed(2)}`;
+};
+
+// Clase Ingreso (hereda de Movimiento)
+function Ingreso(descripcion, monto) {
+  Movimiento.call(this, descripcion, monto, "income");
+}
+
+Ingreso.prototype = Object.create(Movimiento.prototype);
+Ingreso.prototype.constructor = Ingreso;
+
+// Validación específica para Ingreso
+Ingreso.prototype.validarEspecifico = function () {
+  if (this.monto > 10000) {
+    return { ok: false, message: "El monto de ingreso no puede superar $10,000" };
+  }
+  return { ok: true, message: "Validación de ingreso exitosa" };
+};
+
+// Clase Egreso (hereda de Movimiento)
+function Egreso(descripcion, monto) {
+  Movimiento.call(this, descripcion, monto, "expense");
+}
+
+Egreso.prototype = Object.create(Movimiento.prototype);
+Egreso.prototype.constructor = Egreso;
+
+// Validación específica para Egreso
+Egreso.prototype.validarEspecifico = function () {
+  if (this.monto > 5000) {
+    return { ok: false, message: "El monto de egreso no puede superar $5,000" };
+  }
+  return { ok: true, message: "Validación de egreso exitosa" };
+};
+
+// Función para mostrar notificaciones
+function mostrarNotificacion(mensaje, tipo = "success") {
+  notification.textContent = mensaje;
+  notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg text-white ${
+    tipo === "success" ? "bg-green-500" : "bg-red-500"
+  }`;
+  notification.classList.remove("hidden");
+
+  // Ocultar la notificación después de 3 segundos
+  setTimeout(() => {
+    notification.classList.add("hidden");
+  }, 3000);
+}
+
+// Función para crear el movimiento adecuado
+function crearMovimiento(tipo, descripcion, monto) {
+  let movimiento;
+  if (tipo === "income") {
+    movimiento = new Ingreso(descripcion, monto);
+  } else if (tipo === "expense") {
+    movimiento = new Egreso(descripcion, monto);
+  } else {
+    return { ok: false, message: "Tipo de movimiento no válido" };
+  }
+
+  // Validar general y específico
+  const validacionGeneral = movimiento.validarGeneral();
+  if (!validacionGeneral.ok) {
+    return validacionGeneral;
+  }
+
+  const validacionEspecifica = movimiento.validarEspecifico();
+  if (!validacionEspecifica.ok) {
+    return validacionEspecifica;
+  }
+
+  return { ok: true, message: "Movimiento creado exitosamente", movimiento };
+}
+
+// Función para manejar el formulario
+form.addEventListener("submit", function (event) {
+  event.preventDefault();
+
+  const formData = new FormData(form);
+  const descripcion = formData.get("description");
+  const monto = Number(formData.get("amount"));
+  const tipo = formData.get("type");
+
+  const resultado = crearMovimiento(tipo, descripcion, monto);
+
+  if (resultado.ok) {
+    transacciones.push(resultado.movimiento);
+    resultado.movimiento.render();
+    resultado.movimiento.recalcularTotales(); // Actualizar totales
+    mostrarNotificacion(resultado.message, "success"); // Mostrar notificación
+    form.reset(); // Resetear el formulario
+  } else {
+    mostrarNotificacion(resultado.message, "error"); // Mostrar notificación de error
+  }
+});
+
+// Eliminar transacción
+transactionList.addEventListener("click", function (event) {
+  if (event.target.tagName === "BUTTON") {
+    const row = event.target.closest("tr");
+    const descripcion = row.querySelector("td").textContent;
+
+    const index = transacciones.findIndex((t) => t.descripcion === descripcion);
+    if (index !== -1) {
+      transacciones.splice(index, 1);
     }
-    acumulador[tipo] += transaccion.monto;
-    return acumulador;
-  }, {});
 
-  console.log("\n----- Resumen por Tipo -----");
-  for (const tipo in totalPorTipo) {
-    console.log(`Total ${tipo}: $${totalPorTipo[tipo].toFixed(2)}`);
+    row.remove();
+    const movimiento = new Movimiento();
+    movimiento.recalcularTotales(); // Actualizar totales
   }
-}
-
-function calcularTotalSaldo() {
-  return transacciones.reduce((acumulador, transaccion) => {
-    const monto = transaccion.tipoDeTransaccion === "Ingreso" 
-      ? transaccion.monto 
-      : -transaccion.monto;
-    return acumulador + monto;
-  }, 0);
-}
-
-function mostrarResumen() {
-  const cantidadMovimientos = transacciones.length;
-  const saldoTotal = calcularTotalSaldo();
-
-  console.log("\n----- Resumen General -----");
-  console.log(`Cantidad de movimientos: ${cantidadMovimientos}`);
-  console.log(`Saldo total: $${saldoTotal.toFixed(2)}`);
-  mostrarResumenPorTipo();
-  mostrarMovimientosMaximos();
-}
-
-function registrarIngresoOEgreso() {
-  while (true) {
-    let transaccion, tipoDeTransaccion, monto;
-    let datosValidos = false;
-    
-    while (!datosValidos) {
-      transaccion = prompt("Ingrese el nombre de la transacción");
-      tipoDeTransaccion = prompt(
-        "Escoja el tipo de transacción \n1) Ingreso\n2) Egreso\n\n Solo debe poner el número de la opción"
-      );
-      monto = prompt("Ingrese el monto de la transacción");
-      
-      datosValidos = validarDatos(transaccion, tipoDeTransaccion, monto);
-    }
-
-    transacciones.push({
-      transaccion,
-      tipoDeTransaccion: tipoDeTransaccion === "1" ? "Ingreso" : "Egreso",
-      monto: parseFloat(monto),
-      fechaDeCreacion: new Date(),
-    });
-
-    const confirmacion = confirm("¿Desea agregar otra transacción?");
-    if (!confirmacion) {
-      break;
-    }
-  }
-  
-  console.log("Transacciones registradas:", transacciones);
-  mostrarResumen();
-}
-
-// Add these new functions after the existing ones
-function eliminarMovimiento(nombre) {
-  const indice = transacciones.findIndex(t => t.transaccion.toLowerCase() === nombre.toLowerCase());
-  if (indice === -1) {
-    console.log(`No se encontró ningún movimiento con el nombre "${nombre}"`);
-    return false;
-  }
-  
-  transacciones.splice(indice, 1);
-  console.log(`Se eliminó el movimiento "${nombre}"`);
-  return true;
-}
-
-function mostrarMovimientosMaximos() {
-  const ingresos = transacciones.filter(t => t.tipoDeTransaccion === "Ingreso");
-  const egresos = transacciones.filter(t => t.tipoDeTransaccion === "Egreso");
-  
-  const ingresoMax = ingresos.reduce((max, t) => 
-    t.monto > max.monto ? t : max, { monto: 0 });
-    
-  const egresoMax = egresos.reduce((max, t) => 
-    t.monto > max.monto ? t : max, { monto: 0 });
-
-  console.log("\n----- Movimientos Máximos -----");
-  if (ingresoMax.monto > 0) {
-    console.log(`Ingreso más alto: $${ingresoMax.monto.toFixed(2)} (${ingresoMax.transaccion})`);
-  }
-  if (egresoMax.monto > 0) {
-    console.log(`Egreso más alto: $${egresoMax.monto.toFixed(2)} (${egresoMax.transaccion})`);
-  }
-}
-
-// Add this new function to manejar las opciones del menú
-function mostrarMenu() {
-  while (true) {
-    const opcion = prompt(
-      "Seleccione una opción:\n" +
-      "1) Registrar movimiento\n" +
-      "2) Eliminar movimiento\n" +
-      "3) Ver resumen\n" +
-      "4) Salir"
-    );
-
-    switch (opcion) {
-      case "1":
-        registrarIngresoOEgreso();
-        break;
-      case "2":
-        const nombreEliminar = prompt("Ingrese el nombre del movimiento a eliminar:");
-        eliminarMovimiento(nombreEliminar);
-        if (transacciones.length > 0) mostrarResumen();
-        break;
-      case "3":
-        if (transacciones.length > 0) mostrarResumen();
-        else console.log("No hay movimientos registrados");
-        break;
-      case "4":
-        return;
-      default:
-        alert("Opción no válida");
-    }
-  }
-}
-
-// Replace the direct call to registrarIngresoOEgreso with:
-mostrarMenu();
+});
